@@ -11,15 +11,13 @@ import com.mcsimonflash.sponge.cmdbuilder.type.ValueTypes;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.command.*;
 import org.spongepowered.api.entity.living.player.Player;
+import org.spongepowered.api.text.Text;
 import org.spongepowered.api.util.SpongeApiTranslationHelper;
 import org.spongepowered.api.world.Location;
 import org.spongepowered.api.world.World;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -46,7 +44,7 @@ public class Scripts {
         });
     }
 
-    public static Mapping.Result getMapping(String path) {
+    public static Mapping.Result getMappingResult(String path) {
         Mapping mapping = Mapping.ROOT;
         String[] split = path.split(" ", -1);
         int i = 0;
@@ -61,12 +59,32 @@ public class Scripts {
         return new Mapping.Result(mapping, split, i);
     }
 
-    public static Optional<CommandResult> process(CommandSource src, String arguments) {
-        Mapping.Result result = getMapping(arguments);
+    public static Optional<CommandResult> process(CommandSource src, String arguments, long time) {
+        src.sendMessage(Text.of("[" + time + "] " + "processing \"" + arguments + "\""));
+        //new Throwable().getStackTrace();
+        Mapping.Result result = getMappingResult(arguments);
         CommandException exception = null;
         Mapping mapping = result.getMapping();
+
         int i = result.getStart();
-        while (i >= 0) {
+        while (i > 0) {
+            src.sendMessage(Text.of("[" + time + "] " + "initial(" + i + ") mapping name:" + mapping.Name));
+
+            while (mapping.Script == null) {
+                mapping = mapping.Parent;
+                src.sendMessage(Text.of("[" + time + "] (" + i + ") mapping name:" + mapping.Name));
+                if (mapping == null) {
+                    src.sendMessage(Text.of("[" + time + "] " + "breaking from loop"));
+                    return Optional.empty();
+                }
+                i--;
+            }
+            src.sendMessage(Text.of("[" + time + "] " + "final (" + i + ") mapping name:" + mapping.Name));
+            i--;
+        }
+
+        i = result.getStart();
+        while (i > 0) {
             while (mapping.Script == null) {
                 mapping = mapping.Parent;
                 if (mapping == null) {
@@ -75,10 +93,14 @@ public class Scripts {
                 i--;
             }
             String argument = String.join(" ", Arrays.copyOfRange(result.getSplit(), i, result.getSplit().length));
+            src.sendMessage(Text.of("[" + time + "] " + "argument " + i + " in process() = \"" + argument + "\""));
             try {
+                src.sendMessage(Text.of("[" + time + "] " + "sending this (" + i + ") to the script: \"" + argument + "\""));
                 return Optional.of(mapping.Script.getSpec().process(src, argument));
             } catch (CommandException e) {
+                src.sendMessage(Text.of("[" + time + "] " + "exception (" + i + "): \"" + e.getText() + "\""));
                 exception = exception == null ? e : exception;
+                e.printStackTrace();
             }
             i--;
         }
@@ -93,7 +115,7 @@ public class Scripts {
     }
 
     public static List<String> complete(CommandSource src, String arguments, @Nullable Location<World> position) {
-        Mapping.Result result = getMapping(arguments);
+        Mapping.Result result = getMappingResult(arguments);
         Mapping mapping = result.getMapping();
         List<String> suggestions = Lists.newArrayList();
         if (result.getStart() == result.getSplit().length - 1) {

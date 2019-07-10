@@ -49,6 +49,10 @@ public class Script {
                 .arguments(arguments.stream().map(Argument::getElement).toArray(CommandElement[]::new))
                 .permission("cmdbuilder.scripts." + name + ".base")
                 .build();
+        CommandElement[] temp = arguments.stream().map(Argument::getElement).toArray(CommandElement[]::new);
+        for(int i = 0; i < temp.length; i++) {
+            CmdBuilder.log("LOOK HERE (" + name + "): " + temp[i].getKey().toString() + " " + temp[i]);
+        }
     }
 
     public CommandResult execute(CommandSource src, CommandContext args) {

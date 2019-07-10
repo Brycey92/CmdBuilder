@@ -5,13 +5,11 @@ import com.mcsimonflash.sponge.cmdbuilder.command.GetMeta;
 import com.mcsimonflash.sponge.cmdbuilder.command.SetMeta;
 import com.mcsimonflash.sponge.cmdbuilder.internal.Scripts;
 import com.mcsimonflash.sponge.cmdbuilder.internal.Util;
-import com.mcsimonflash.sponge.cmdbuilder.type.ParserType;
-import com.mcsimonflash.sponge.cmdbuilder.type.ParserTypes;
-import com.mcsimonflash.sponge.cmdbuilder.type.ValueTypes;
-import com.mcsimonflash.sponge.cmdbuilder.type.ValueType;
+import com.mcsimonflash.sponge.cmdbuilder.type.*;
 import com.mcsimonflash.sponge.cmdcontrol.core.CmdPlugin;
 import com.mcsimonflash.sponge.cmdcontrol.teslalibs.registry.Registry;
 import com.mcsimonflash.sponge.cmdcontrol.teslalibs.registry.RegistryService;
+import org.slf4j.Logger;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.event.Listener;
@@ -22,6 +20,7 @@ import org.spongepowered.api.event.game.state.GameInitializationEvent;
 import org.spongepowered.api.plugin.Dependency;
 import org.spongepowered.api.plugin.Plugin;
 import org.spongepowered.api.plugin.PluginContainer;
+import org.spongepowered.api.text.Text;
 
 import java.util.Optional;
 
@@ -33,6 +32,9 @@ public class CmdBuilder extends CmdPlugin {
     private static final Registry<ValueType> VALUE_REGISTRY = Registry.of();
     public static final RegistryService<ParserType> PARSER_TYPES = RegistryService.of(PARSER_REGISTRY);
     public static final RegistryService<ValueType> VALUE_TYPES = RegistryService.of(VALUE_REGISTRY);
+
+    @Inject
+    private Logger logger;
 
     @Inject
     public CmdBuilder(PluginContainer container) {
@@ -63,6 +65,7 @@ public class CmdBuilder extends CmdPlugin {
         registerValueType(ValueTypes.UUID, container);
         registerValueType(ValueTypes.VECTOR_3D, container);
         registerValueType(ValueTypes.WORLD, container);
+        OptionalTypes.initialize();
     }
 
     @Listener
@@ -79,7 +82,10 @@ public class CmdBuilder extends CmdPlugin {
 
     @Listener
     public void onSendCommand(SendCommandEvent event, @Root CommandSource src) {
-        Optional<CommandResult> result = Scripts.process(src, event.getCommand() + " " + event.getArguments());
+        long time = System.currentTimeMillis();
+        src.sendMessage(Text.of("[" + time + "] " + "event.getCommand() = \"" + event.getCommand() + "\", event.getArguments() = \"" + event.getArguments() + "\""));
+
+        Optional<CommandResult> result = Scripts.process(src, event.getCommand() + (event.getArguments().isEmpty() ? "" : " " + event.getArguments()), time);
         if (result.isPresent()) {
             event.setCancelled(true);
             event.setResult(result.get());
@@ -96,6 +102,10 @@ public class CmdBuilder extends CmdPlugin {
 
     public static boolean registerValueType(ValueType type, PluginContainer container) {
         return VALUE_REGISTRY.register(type.getName(), type, container);
+    }
+
+    public static void log(String msg) {
+        instance.logger.warn(msg);
     }
 
 }

@@ -36,7 +36,9 @@ public class ParserTypes {
         @Override
         public ValueParser<String> getParser(ConfigurationNode meta) {
             ConfigurationNode choices = meta.getNode("choices");
-            Collector<ConfigurationNode, ?, Map<String, String>> collector = Collectors.toMap(choices.hasListChildren() ? c -> c.getString("") : c -> (String) c.getKey(), c -> c.getString(""));
+          //Collector<ConfigurationNode, ?, Map<String, String>> collector = Collectors.toMap(choices.hasListChildren() ? c -> c.getString("") : c -> (String) c.getKey(), c -> c.getString(""));
+            Function<ConfigurationNode, String> keyFunction = choices.hasListChildren() ? n -> n.getString("") : n -> (String) n.getKey();
+            Collector<ConfigurationNode, ?, Map<String, String>> collector = Collectors.toMap(keyFunction, c -> c.getString(""));
             return Arguments.choices((choices.hasListChildren() ? choices.getChildrenList() : choices.getChildrenMap().values()).stream().collect(collector), ImmutableMap.of("no-choice", meta.getNode("messages", "no-choice").getString("No choice available for <key>.")));
         }
 
